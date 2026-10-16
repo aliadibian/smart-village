@@ -20,20 +20,29 @@ interface SupabaseEntry {
 export default function GameBoard({ highlightId }: { highlightId?: string | null }) {
   const [entries, setEntries] = useState<SupabaseEntry[]>([]);
 
-  // خواندن آنلاین امتیازات بازی از Supabase
+  // خواندن آنلاین امتیازات بازی و فیلتر کردن بهترین امتیاز هر کاربر
   useEffect(() => {
     const fetchGameLeaderboard = async () => {
       const { data, error } = await supabase
         .from('leaderboard')
         .select('*')
         .eq('type', 'game')
-        .order('score', { ascending: false })
-        .limit(20);
+        .order('score', { ascending: false });
 
       if (error) {
         console.error('خطا در دریافت لیدربرد بازی:', error);
       } else if (data) {
-        setEntries(data);
+        // گروه‌بندی بر اساس نام کاربری و نگه داشتن فقط بالاترین امتیاز
+        const bestScoresMap = new Map<string, SupabaseEntry>();
+        data.forEach((item) => {
+          if (!bestScoresMap.has(item.username) || bestScoresMap.get(item.username)!.score < item.score) {
+            bestScoresMap.set(item.username, item);
+          }
+        });
+
+        // تبدیل به آرایه و مرتب‌سازی نزولی بر اساس امتیاز
+        const uniqueEntries = Array.from(bestScoresMap.values()).sort((a, b) => b.score - a.score);
+        setEntries(uniqueEntries);
       }
     };
 
@@ -62,12 +71,12 @@ export default function GameBoard({ highlightId }: { highlightId?: string | null
           <div>
             <h2 className="font-display text-xl leading-tight text-ink sm:text-2xl">برترین‌های مزرعه (آنلاین)</h2>
             <p className="text-[0.7rem] font-bold text-ink-soft sm:text-xs">
-              امتیازات برتر بازیکنان به صورت زنده در لیدربرد جهانی ثبت می‌شود
+              فقط بهترین امتیاز هر بازیکن در جدول ثبت و نمایش داده می‌شود
             </p>
           </div>
         </div>
         <span className="rounded-xl bg-leaf-soft px-3 py-1.5 text-xs font-black text-leaf-deep">
-          {faNum(entries.length)} بازیکن
+          {faNum(entries.length)} بازیکن برتر
         </span>
       </div>
 
@@ -121,7 +130,7 @@ export default function GameBoard({ highlightId }: { highlightId?: string | null
 
       <p className="mt-4 flex items-start gap-2 rounded-xl bg-cream/70 px-3.5 py-3 text-[0.72rem] leading-6 text-ink-soft">
         <IconTarget size={14} className="mt-1 shrink-0" />
-        جدول به صورت آنلاین به دیتابیس متصل است و رتبه‌بندی بازیکنان به روز نمایش داده می‌شود.
+        جدول به صورت آنلاین به دیتابیس متصل است و رکورد هر بازیکن به صورت خودکار با بالاترین امتیاز به‌روز می‌شود.
       </p>
     </section>
   );
