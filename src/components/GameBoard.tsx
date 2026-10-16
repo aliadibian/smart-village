@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listGameScores, type GameScore } from "../lib/storage";
+import { supabase } from '../supabase';
 import { faNum } from "../lib/fa";
 import { IconTrophy, IconTarget, IconRefresh } from "./icons";
 import { cn } from "../utils/cn";
@@ -10,16 +10,47 @@ const MEDAL = [
   "bg-clay-soft text-clay-deep ring-clay/40",
 ];
 
-export default function GameBoard({ highlightId }: { highlightId?: string | null }) {
-  const [entries, setEntries] = useState<GameScore[]>([]);
+interface SupabaseEntry {
+  id: number | string;
+  username: string;
+  score: number;
+  created_at?: string;
+}
 
-  // هر بار که مسابقه تموم شد، دوباره از storage می‌خونیم
+export default function GameBoard({ highlightId }: { highlightId?: string | null }) {
+  const [entries, setEntries] = useState<SupabaseEntry[]>([]);
+
+  // خواندن آنلاین امتیازات بازی از Supabase
   useEffect(() => {
-    setEntries(listGameScores());
-    const onStorage = () => setEntries(listGameScores());
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [highlightId]);
+    const fetchGameLeaderboard = async () => {
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .eq('type', 'game')
+        .order('score', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('خطا در دریافت لیدربرد بازی:', error);
+      } else if (data) {
+        setEntries(data);
+      }
+    };
+
+    fetchGameLeaderboard();
+
+    // بروزرسانی خودکار با تغییرات دیتابیس
+    const channel = supabase
+      .channel('public:leaderboard:game')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard', filter: 'type=eq.game' }, () => {
+        fetchGameLeaderboard();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <section className="fade-up mt-6 rounded-3xl border border-ink/8 bg-parchment p-4 shadow-[0_20px_50px_-30px_rgba(20,54,41,0.4)] sm:p-6">
@@ -29,9 +60,9 @@ export default function GameBoard({ highlightId }: { highlightId?: string | null
             <IconTrophy size={20} />
           </span>
           <div>
-            <h2 className="font-display text-xl leading-tight text-ink sm:text-2xl">برترین‌های مزرعه</h2>
+            <h2 className="font-display text-xl leading-tight text-ink sm:text-2xl">برترین‌های مزرعه (آنلاین)</h2>
             <p className="text-[0.7rem] font-bold text-ink-soft sm:text-xs">
-              هر نفر هر بار بخواد می‌تونه بازی کنه؛ بهترین امتیازش ثبت می‌شه
+              امتیازات برتر بازیکنان به صورت زنده در لیدربرد جهانی ثبت می‌شود
             </p>
           </div>
         </div>
@@ -51,7 +82,7 @@ export default function GameBoard({ highlightId }: { highlightId?: string | null
       ) : (
         <ol className="overflow-hidden rounded-2xl border border-ink/8">
           {entries.map((e, i) => {
-            const me = e.id === highlightId;
+            const me = String(e.id) === String(highlightId);
             return (
               <li
                 key={e.id}
@@ -70,18 +101,13 @@ export default function GameBoard({ highlightId }: { highlightId?: string | null
                   {faNum(i + 1)}
                 </span>
 
-                <span className="min-w-0 flex-1 truncate text-sm font-bold text-ink" title={e.name}>
-                  {e.name}
+                <span className="min-w-0 flex-1 truncate text-sm font-bold text-ink" title={e.username}>
+                  {e.username}
                   {me && (
                     <span className="mr-1.5 rounded-full bg-leaf px-2 py-0.5 text-[0.65rem] font-black text-cream">
                       شما
                     </span>
                   )}
-                </span>
-
-                <span className="hidden items-center gap-1 rounded-lg bg-cream/70 px-2 py-1 text-[0.7rem] font-black text-ink-soft sm:flex">
-                  <IconRefresh size={11} />
-                  {faNum(e.runs || 1)} تلاش
                 </span>
 
                 <span className="w-12 shrink-0 text-left font-display text-xl text-pine sm:w-14 sm:text-2xl">
@@ -95,7 +121,7 @@ export default function GameBoard({ highlightId }: { highlightId?: string | null
 
       <p className="mt-4 flex items-start gap-2 rounded-xl bg-cream/70 px-3.5 py-3 text-[0.72rem] leading-6 text-ink-soft">
         <IconTarget size={14} className="mt-1 shrink-0" />
-        جدول روی همین مرورگر ذخیره می‌شه. هر بار که امتیازت از قبلی بیشتر بشه، جایگاهت عوض می‌شه.
+        جدول به صورت آنلاین به دیتابیس متصل است و رتبه‌بندی بازیکنان به روز نمایش داده می‌شود.
       </p>
     </section>
   );
