@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { supabase } from '../supabase';
 import { faNum } from "../lib/fa";
 import { useFarmGame, saveGameName, clearGameName } from "../game/useFarmGame";
@@ -34,6 +34,20 @@ export default function GamePage() {
   const [nameError, setNameError] = useState("");
   const nameRef = useRef(playerName);
   nameRef.current = playerName;
+
+  // تابع ثبت آنلاین امتیاز بازی در Supabase
+  const submitGameScore = async (username: string, score: number) => {
+    if (!username || score <= 0) return;
+    const { error } = await supabase.from('leaderboard').insert([{ username, score, type: 'game' }]);
+    if (error) console.error('خطا در ثبت امتیاز بازی:', error);
+  };
+
+  // ارسال خودکار امتیاز به محض تمام شدن بازی (won یا lost)
+  useEffect(() => {
+    if ((phase === "won" || phase === "lost") && finalStats && finalStats.score > 0 && playerName) {
+      submitGameScore(playerName, finalStats.score);
+    }
+  }, [phase, finalStats, playerName]);
 
   const start = () => {
     // قبل از اولین بازی، اسم بازیکن لازمه
@@ -339,7 +353,7 @@ function TouchSteer({ side, onPress }: { side: "left" | "right"; onPress: (down:
     <button
       aria-label={side === "left" ? "حرکت به چپ" : "حرکت به راست"}
       className={cn(
-        "absolute bottom-3 z-10 grid h-16 w-16 touch-none select-none place-items-center rounded-full bg-ink/25 text-cream ring-1 ring-cream/40 backdrop-blur-[2px] transition-transform active:scale-90 active:bg-ink/40",
+        "absolute bottom-3 z-10 grid h-16 w-16 touch-none select-none place-items-center rounded-full bg-ink/25 text-cream ring-1 ring-cream/40 backdrop-blur-[2px] transition-transform active:scale-95 active:bg-ink/40",
         side === "left" ? "left-3" : "right-3"
       )}
       onPointerDown={stop(true)}
@@ -380,8 +394,3 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-// تابع ثبت آنلاین امتیاز بازی
-const submitGameScore = async (username: string, score: number) => {
-  if (!username || score <= 0) return;
-  await supabase.from('leaderboard').insert([{ username, score, type: 'game' }]);
-};
