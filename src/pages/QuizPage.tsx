@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { supabase } from '../supabase';
 import { QUIZ, QUIZ_POINTS, QUIZ_TOTAL } from "../data/quiz";
 import { leaderboard, type ScoreEntry } from "../lib/storage";
 import {
@@ -146,6 +147,12 @@ export default function QuizPage() {
     const finalCorrect = correctCount;
     const finalScore = finalCorrect * QUIZ_POINTS;
     const finalTime = Date.now() - startRef.current;
+
+    supabase.from('leaderboard').insert([
+      { username: name, score: finalScore, type: 'quiz' }
+    ]).then(({ error }) => {
+      if (error) console.error('خطا در ثبت امتیاز کوییز:', error);
+    });
 
     const record = completeAttempt(finalScore, finalCorrect, finalTime);
     setAttempt(record);
@@ -530,7 +537,7 @@ export default function QuizPage() {
             </p>
           </div>
 
-          <Leaderboard entries={entries} highlightId={lastEntry?.id} />
+          <Leaderboard type="quiz" />
         </div>
       )}
 
@@ -544,7 +551,7 @@ export default function QuizPage() {
             <span className="rotate-180"><IconChevronLeft size={16} /></span>
             بازگشت
           </button>
-          <Leaderboard entries={entries} highlightId={lastEntry?.id} />
+          <Leaderboard type="quiz" />
           {getAttempt() && (
             <TeacherPanel
               onReset={() => {
@@ -558,17 +565,3 @@ export default function QuizPage() {
     </div>
   );
 }
-import { supabase } from '../supabase';
-
-// این تابع برای ثبت امتیاز است
-const saveScoreToDatabase = async (username: string, score: number, type: 'game' | 'quiz') => {
-  const { error } = await supabase
-    .from('leaderboard')
-    .insert([{ username, score, type }]);
-
-  if (error) {
-    console.error('خطا در ثبت امتیاز:', error);
-  } else {
-    console.log('امتیاز با موفقیت ثبت شد!');
-  }
-};

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { supabase } from '../supabase';
 import { faNum } from "../lib/fa";
 import { useFarmGame, saveGameName, clearGameName } from "../game/useFarmGame";
 import { useIsMobile } from "../hooks/useMediaQuery";
@@ -379,17 +380,8 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-import { supabase } from '../supabase';
-
-// این تابع برای ثبت امتیاز است
-const saveScoreToDatabase = async (username: string, score: number, type: 'game' | 'quiz') => {
-  const { error } = await supabase
-    .from('leaderboard')
-    .insert([{ username, score, type }]);
-
-  if (error) {
-    console.error('خطا در ثبت امتیاز:', error);
-  } else {
-    console.log('امتیاز با موفقیت ثبت شد!');
-  }
+// تابع ثبت آنلاین امتیاز بازی
+const submitGameScore = async (username: string, score: number) => {
+  if (!username || score <= 0) return;
+  await supabase.from('leaderboard').insert([{ username, score, type: 'game' }]);
 };
