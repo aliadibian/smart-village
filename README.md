@@ -10,10 +10,16 @@
 
 <br>
 
+### [🌐 دیدن نسخه‌ی زنده](https://smart-village-topaz.vercel.app)
+
+<br>
+
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)
 
 </div>
 
@@ -39,7 +45,7 @@
 
 ### 🧠 مسابقه‌ی دانایی
 
-۱۰ سؤال چهارگزینه‌ای، هرکدام ۱۰ امتیاز. اسمت را می‌دهی، جواب هر سؤال را همان لحظه با توضیح می‌بینی و در پایان جایگاهت را در جدول امتیاز پیدا می‌کنی.
+۱۰ سؤال چهارگزینه‌ای، هرکدام ۱۰ امتیاز. اسمت را می‌دهی، جواب هر سؤال را همان لحظه با توضیح می‌بینی و در پایان جایگاهت را در جدول امتیاز **آنلاین** پیدا می‌کنی.
 
 هر نفر فقط **یک‌بار** می‌تواند شرکت کند.
 
@@ -54,31 +60,10 @@
 | لمس | کشیدن روی صفحه یا دکمه‌های موبایل |
 | مکث | کلید P یا دکمه‌ی HUD |
 
-اگر تب را ببندی یا عوض کنی، بازی خودش متوقف می‌شود.
+اگر تب را ببندی یا عوض کنی، بازی خودش متوقف می‌شود. امتیازت هم در جدول آنلاین ثبت می‌شود و از هر اسم فقط بهترین امتیازش می‌ماند، پس کسی نمی‌تواند کل جدول را قبضه کند.
 
 <br>
 
-## اجرا روی سیستم خودت
-
-```bash
-git clone https://github.com/aliadibian/smart-village.git
-cd smart-village
-npm install
-npm run dev
-```
-
-بعد برو به `http://localhost:5173`.
-
-برای ساخت نسخه‌ی نهایی:
-
-```bash
-npm run build     # خروجی در dist/ و فقط یک فایل index.html کامل
-npm run preview
-```
-
-هیچ متغیر محیطی لازم نیست. بدون فایل `.env` هم همه‌چیز کار می‌کند.
-
-<br>
 
 ## ساختار کد
 
@@ -90,6 +75,7 @@ src/
 │   └── ...           پنل مکان‌ها، جدول امتیاز، نوار بالا، آیکون‌ها
 ├── game/             موتور بازی «نجات مزرعه»، جدا از React
 ├── hooks/            useMediaQuery و useReducedMotion
+├── supabase.ts       اتصال به Supabase برای جدول امتیاز
 ├── pages/            سه صفحه‌ی اصلی
 ├── data/             اطلاعات مکان‌ها و سؤال‌ها
 └── lib/              ذخیره‌سازی، قفل تک‌تلاش، اعداد فارسی
@@ -120,17 +106,24 @@ src/
 
 <br>
 
-## جدول امتیاز
+## جدول امتیاز آنلاین
 
-فعلاً از `localStorage` استفاده می‌کند، یعنی جدول مال همان مرورگر است و بین دستگاه‌ها مشترک نیست.
+جدول امتیاز روی **Supabase** است، پس همه‌ی بازدیدکننده‌ها یک جدول مشترک را می‌بینند، نه هرکس جدول مرورگر خودش را.
 
-برای مشترک کردن آن، فقط یک پیاده‌سازی تازه از `LeaderboardStore` در `src/lib/storage.ts` بنویس و `leaderboard` را عوض کن. رابط کاربری هیچ تغییری لازم ندارد.
+- هر دو بخش (مسابقه و بازی) در یک جدول به اسم `leaderboard` ثبت می‌شوند و ستون `type` آن‌ها را جدا می‌کند (`quiz` یا `game`)
+- ستون‌ها: `username`، `score`، `type` و `created_at`
+- جدول بازی **زنده** است. با Supabase Realtime به تغییرات گوش می‌دهد و بدون رفرش به‌روز می‌شود
+- از هر اسم در جدول بازی فقط بهترین امتیاز نمایش داده می‌شود
+
+اگر می‌خواهی پروژه را با دیتابیس خودت اجرا کنی، آدرس و کلید پروژه‌ات را در `src/supabase.ts` بگذار و جدولی با همین ستون‌ها بساز. Realtime را هم برای جدول `leaderboard` روشن کن.
+
+> 🔐 کلید `anon` در Supabase ذاتاً عمومی است و قرار است در کد فرانت‌اند باشد. امنیت واقعی با قوانین **Row Level Security** تنظیم می‌شود، پس مطمئن شو فقط خواندن و درج برای جدول `leaderboard` مجاز است.
 
 <br>
 
 ## ساخته‌شده با
 
-React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Canvas API · Web Audio API
+React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Supabase · Canvas API · Web Audio API · Vercel
 
 <br>
 
